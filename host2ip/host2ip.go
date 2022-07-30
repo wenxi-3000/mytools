@@ -131,7 +131,6 @@ func (r *runner) outputWork(path string) {
 
 	}
 
-	//去重
 	for ip := range ips {
 		//fmt.Println("ip:", ip)
 		fmt.Println(ip)
