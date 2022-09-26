@@ -7,10 +7,11 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 func main() {
-	file, err := os.Open("./ip-port.txt")
+	file, err := os.Open("./ip.txt")
 	if err != nil {
 		log.Panic(err)
 	}
@@ -27,9 +28,14 @@ func main() {
 
 func httpx(host string) {
 	url := "http://" + host
-	resp, err := http.Get(url)
+	//resp, err := http.Get(url)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	cli := http.Client{
+		Timeout: time.Millisecond * 3,
+	}
+	resp, err := cli.Do(req)
 	if err != nil {
-		fmt.Println(err)
+		log.Panic(err)
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
@@ -37,21 +43,3 @@ func httpx(host string) {
 		fmt.Println(host)
 	}
 }
-
-// func GetFileContent(filename string) {
-// 	file, err := os.Open(filename)
-// 	if err != nil {
-// 		fmt.Println(err)
-// 	}
-// 	defer file.Close()
-
-// 	scanner := bufio.NewScanner(file)
-
-// 	for scanner.Scan() {
-// 		fmt.Println(scanner.Text())
-// 	}
-
-// 	if err := scanner.Err(); err != nil {
-// 		log.Fatal(err)
-// 	}
-// }
