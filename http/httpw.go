@@ -1,11 +1,10 @@
 package main
 
 import (
-	"crypto/tls"
+	"bufio"
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -13,6 +12,7 @@ import (
 )
 
 func main() {
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 	//文件处理
 	file, err := os.Open("./ip.txt")
 	if err != nil {
@@ -23,31 +23,18 @@ func main() {
 	content, err := ioutil.ReadAll(file)
 	ipPortList := strings.Split(string(content), "\n")
 
-	//http机制
-	timeout := time.Duration(10000 * 1000000)
-	var tr = &http.Transport{
-		MaxIdleConns:      30,
-		IdleConnTimeout:   time.Second,
-		DisableKeepAlives: true,
-		TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
-		DialContext: (&net.Dialer{
-			Timeout:   timeout,
-			KeepAlive: time.Second,
-		}).DialContext,
-	}
-
-	re := func(req *http.Request, via []*http.Request) error {
-		return http.ErrUseLastResponse
-	}
-
+	//设置http请求的超时时间
 	client := &http.Client{
-		Transport:     tr,
-		CheckRedirect: re,
-		Timeout:       timeout,
+		Timeout: time.Second * 3,
 	}
 
+	//结果
+	var results []string
+
+	//循环请求所有的ip:port
 	for _, item := range ipPortList {
-		url := "http://" + item
+		url := "http://" + item + "/testx"
+		fmt.Println(url)
 		//resp, err := http.Get(url)
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
@@ -60,6 +47,7 @@ func main() {
 		resp, err := client.Do(req)
 		if err != nil {
 			log.Println(err)
+			continue
 		}
 		defer resp.Body.Close()
 
@@ -69,8 +57,22 @@ func main() {
 				log.Println(err)
 			}
 			if strings.Contains(string(body), "swagger-ui") {
-				fmt.Println(item)
+				results = append(results, item)
 			}
 		}
 	}
+
+	resultFile, err := os.OpenFile("./output.txt", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+	if err != nil {
+		log.Println(nil)
+		os.Exit(1)
+	}
+	defer resultFile.Close()
+
+	writer := bufio.NewWriter(resultFile)
+	for _, item := range results {
+		writer.WriteString(item + "\n")
+	}
+	writer.Flush()
+
 }
